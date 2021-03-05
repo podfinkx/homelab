@@ -12,16 +12,16 @@ My docker setup hosts most of my services that are essential for my daily use.
     pihole      # dns level adblocker
 
     # media
-    *jackett     # API Support for your favorite torrent trackers
-    *jellyfin    # media system
-    *radarr      # A fork of Sonarr to work with movies
-    *sonarr      # Smart PVR for newsgroup and bittorrent users
-    *deluge      # BitTorrent client
-    *jdownloader # Download manager 
+    *jackett                # API Support for your favorite torrent trackers
+    *jellyfin                # media system
+    *radarr                 # A fork of Sonarr to work with movies
+    *sonarr                # Smart PVR for newsgroup and bittorrent users
+    *deluge               # BitTorrent client
+    *jdownloader     # Download manager 
 
     note: services marked with a * are yet to be implemented.
     ```
-    *the global docker-compose.yml file follows this exact order*
+    >*the global docker-compose.yml file follows this exact order*
 
 ## Traefik
 
