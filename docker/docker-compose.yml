@@ -1,0 +1,100 @@
+version: "3"
+
+services:
+
+  watchtower:
+    image: containrrr/watchtower:latest
+    container_name: watchtower
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+    environment:
+      - TZ=${TZ}
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    command: --label-enable --cleanup --debug --interval 300
+
+  traefik:
+    depends_on:
+      - watchtower
+    environment:
+      - TZ=${TZ}
+      - DUCKDNS_TOKEN=${DUCKDNS_TOKEN}
+    image: traefik:v2.4.6
+    container_name: traefik
+    restart: unless-stopped
+    labels:
+      - "com.centurylinklabs.watchtower.enable=true"
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.traefik.entryPoints=https"
+      - "traefik.http.routers.traefik.middlewares=auth@file"
+      - "traefik.http.routers.traefik.rule=Host(`traefik.${TRAEFIK_DOMAIN}`)"
+      - "traefik.http.routers.traefik.service=api@internal"
+      - "traefik.http.routers.traefik.tls=true"
+      - "traefik.http.routers.traefik.tls.certResolver=letsencrypt"
+      - "traefik.http.routers.traefik.tls.domains[0].main=*.${TRAEFIK_DOMAIN}"
+      # web panel
+      - "traefik.http.services.traefik.loadbalancer.server.port=8080"
+    networks:
+      - traefik
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "./traefik:/etc/traefik"
+
+  pihole:
+    container_name: pihole
+    image: pihole/pihole:latest
+    depends_on:
+      - watchtower
+      - traefik
+    labels:
+      # watchtower
+      - "com.centurylinklabs.watchtower.enable=true"
+      # traefik
+      - "traefik.enable=true"
+      - "traefik.docker.network=traefik"
+      - "traefik.http.routers.pihole.entryPoints=https"
+      - "traefik.http.routers.pihole.rule=Host(`pihole.${TRAEFIK_DOMAIN}`)"
+      - "traefik.http.routers.pihole.tls=true"
+      - "traefik.http.routers.pihole.tls.certResolver=letsencrypt"
+      - "traefik.http.routers.pihole.tls.domains[0].main=*.${TRAEFIK_DOMAIN}"
+      # web panel
+      - "traefik.http.services.pihole.loadbalancer.server.port=80"
+      - "traefik.http.routers.pihole.middlewares=pihole-admin@file"
+      # DNS-over-TLS
+      - "traefik.tcp.routers.dnsovertls.rule=Host(`pihole.${TRAEFIK_DOMAIN}`)"
+      - "traefik.tcp.routers.dnsovertls.entrypoints=dnsovertls"
+      - "traefik.tcp.routers.dnsovertls.tls.certresolver=letsencrypt"
+      - "traefik.tcp.routers.dnsovertls.tls.domains[0].main=*.${TRAEFIK_DOMAIN}"
+      - "traefik.tcp.routers.dnsovertls.service=pihole"
+      # Normal DNS coming in on 53 TCP, no TLS
+      - "traefik.tcp.routers.dns.rule=Host(`pihole.${TRAEFIK_DOMAIN}`)"
+      - "traefik.tcp.routers.dns.entrypoints=dns"
+      - "traefik.tcp.routers.dns.service=pihole"
+      # Normal DNS coming in on 53 UDP
+      - "traefik.udp.routers.udpdns.entrypoints=udpdns"
+      - "traefik.udp.routers.udpdns.service=pihole"
+      # recieves traffic from both the TLS and non-TLS traefik routers
+      - "traefik.tcp.services.pihole.loadbalancer.server.port=53"
+      - "traefik.udp.services.pihole.loadbalancer.server.port=53"
+    environment:
+      - TZ=${TZ}
+      - WEBPASSWORD=${PIHOLE_WEBPASSWORD}
+    volumes:
+      - "/srv/homelab/docker/pihole/config/etc-pihole/:/etc/pihole/"
+      - "/srv/homelab/docker/pihole/config/etc-dnsmasq.d/:/etc/dnsmasq.d/"
+    dns:
+      - 127.0.0.1
+      - 1.1.1.1
+    restart: unless-stopped
+    networks:
+      traefik:
+        ipv4_address: ${PIHOLE_STATIC_IP}
+
+networks:
+  traefik:
+    external: true
