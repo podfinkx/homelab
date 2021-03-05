@@ -1,5 +1,9 @@
+# root folder
+.history
+
 # docker
 docker/.history
 docker/.env
 docker/traefik/acme.json
 docker/traefik/authFile
+
