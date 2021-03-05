@@ -1,0 +1,6 @@
+[http.middlewares]
+  [http.middlewares.auth.basicAuth]
+    usersFile = "/etc/traefik/authFile"
+
+  [http.middlewares.pihole-admin.addPrefix]
+    prefix = "/admin"
