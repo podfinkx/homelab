@@ -1,0 +1,5 @@
+# docker
+docker/.history
+docker/.env
+docker/traefik/acme.json
+docker/traefik/authFile
